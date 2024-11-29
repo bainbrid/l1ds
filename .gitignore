@@ -1,0 +1,6 @@
+*.pyc
+*/*.pyc
+x509up
+correctionlib*
+docs/build
+__pycache__/
