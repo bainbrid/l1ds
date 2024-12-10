@@ -12,19 +12,20 @@ class Config(cmt_config):
     def add_categories(self, **kwargs):
         categories = [
             Category("base", "base", selection="event >= 0"),
+            Category("dum", "Event 1", selection="event == 1"),
         ]
         return ObjectCollection(categories)
 
     def add_processes(self):
         processes = [
-            Process("ggf", Label("HH_{ggF}"), color=(0, 0, 0), isSignal=True),
-            Process("ggf_sm", Label("HH_{ggF} (SM)"), color=(0, 0, 0), isSignal=True,
-                parent_process="ggf"),
+            Process("suep", Label("SUEP"), color=(0, 0, 0), isSignal=True),
+            Process("qcd", Label("QCD (p_{T} 15-7000)"), color=(255, 0, 0)),
         ]
 
         process_group_names = {
             "default": [
-                "ggf_sm",
+                "qcd",
+                "suep",
                 # "data_tau",
                 # "dy_high",
                 # "tt_dl",
@@ -44,18 +45,26 @@ class Config(cmt_config):
     def add_datasets(self):
 
         datasets = [
-            Dataset("ggf_sm",
-                dataset="/GluGlutoHHto2B2Tau_kl-1p00_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/"
-                    "jleonhol-v1-00000000000000000000000000000000/USER",
-                process=self.processes.get("ggf_sm"),
-                xs=0.02963,
+            Dataset("suep",
+                folder="/vols/cms/jleonhol/l1scouting/samples/2023/suep/",
+                process=self.processes.get("suep"),
+                xs=1.,
+                tags=["ul"]),
+            Dataset("suep_unique",
+                folder="/vols/cms/jleonhol/l1scouting/samples/2023/suep_unique/",
+                process=self.processes.get("suep"),
+                xs=1.,
+                tags=["ul"]),
+            Dataset("qcd",
+                folder="/vols/cms/jleonhol/l1scouting/samples/2023/QCD_PT-15to7000/",
+                process=self.processes.get("qcd"),
+                xs=1.,
                 tags=["ul"]),
         ]
         return ObjectCollection(datasets)
 
     def add_features(self):
-        features = [
-            
+        from config.features import features            
         return ObjectCollection(features)
 
     def add_weights(self):
@@ -148,4 +157,4 @@ class Config(cmt_config):
 
 
 # config = Config("base", year=2018, ecm=13, lumi_pb=59741)
-config = Config("l1_2024", year=2024, ecm=13.6, lumi_pb=1)
+config = Config("suep_2023", year=2023, ecm=13.6, lumi_pb=1000)

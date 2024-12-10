@@ -1,0 +1,57 @@
+hw:
+  name: EtaPhiEtFromHardware
+  path: modules.hardware
+  parameters:
+    year: self.config.year 
+
+
+
+
+boost:
+  name: Boost
+  path: modules.sphericity
+  parameters:
+    year: self.config.year 
+
+
+darkphoton:
+  name: ParticleBooster
+  path: modules.sphericity
+  parameters:
+    pt: GenPart_pt[GenPart_pdgId == 999998]
+    eta: GenPart_eta[GenPart_pdgId == 999998]
+    phi: GenPart_phi[GenPart_pdgId == 999998]
+    mass: GenPart_mass[GenPart_pdgId == 999998]
+    output_prefix: BoostedDarkPhoton
+
+hig:
+  name: HiggsSelector
+  path: modules.sphericity
+  parameters:
+    year: self.config.year 
+
+hig_booster:
+  name: SingleParticleBooster
+  path: modules.sphericity
+  parameters:
+    pt: GenPart_pt.at(higgs_index)
+    eta: GenPart_eta.at(higgs_index)
+    phi: GenPart_phi.at(higgs_index)
+    mass: GenPart_mass.at(higgs_index)
+    output_prefix: BoostedHiggs
+
+hig_momentum:
+  name: MomentumMaker
+  path: modules.sphericity
+  parameters:
+    pt: BoostedHiggs_pt
+    eta: BoostedHiggs_eta
+    phi: BoostedHiggs_phi
+    mass: 125.
+    output_prefix: BoostedHiggs
+
+sph:
+  name: Sphericity
+  path: modules.sphericity
+  parameters:
+    year: self.config.year 
