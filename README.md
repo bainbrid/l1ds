@@ -10,7 +10,7 @@ Information about the code, how to install it, setting a configuration to use it
 ## Installation
 
 ```
-git clone git@github.com:jleonhol/l1dssuep.git
+git clone https://gitlab.cern.ch/jleonhol/l1dssuep.git
 cd l1dssuep
 git clone https://gitlab.cern.ch/cms-phys-ciemat/nanoaod_base_analysis.git --branch py3 nanoaod_base_analysis/
 source setup.sh
