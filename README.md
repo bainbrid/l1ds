@@ -1,7 +1,5 @@
-# l1dssuep
-This is a user code for the configuration of a SUEP analysis using L1 scouting used with the [main code](https://gitlab.cern.ch/cms-phys-ciemat/nanoaod_base_analysis.git) of the NanoAOD-base-analysis, which aims to process NanoAOD datasets, allowing to generate different root files, histograms and plots with the desired selection of events, variables and branches.
-
-Make a fork of this repository, so you can use it as an example for your own analysis.
+# l1ds
+This is a user code for the configuration of analyses using L1 scouting used with the [main code](https://gitlab.cern.ch/cms-phys-ciemat/nanoaod_base_analysis.git) of the NanoAOD-base-analysis, which aims to process NanoAOD datasets, allowing to generate different root files, histograms and plots with the desired selection of events, variables and branches.
 
 ## User guide:
 
@@ -10,8 +8,8 @@ Information about the code, how to install it, setting a configuration to use it
 ## Installation
 
 ```
-git clone https://gitlab.cern.ch/jleonhol/l1dssuep.git
-cd l1dssuep
+git clone https://gitlab.cern.ch/ic-l1ds/l1ds.git
+cd l1ds
 git clone https://gitlab.cern.ch/cms-phys-ciemat/nanoaod_base_analysis.git --branch py3 nanoaod_base_analysis/
 source setup.sh
 law index --verbose #to do only after installation or including a new task
