@@ -8,7 +8,7 @@ Information about the code, how to install it, setting a configuration to use it
 ## Installation
 
 ```
-git clone https://gitlab.cern.ch/ic-l1ds/l1ds.git
+git clone https://github.com/ic-l1ds/l1ds.git
 cd l1ds
 git clone https://gitlab.cern.ch/cms-phys-ciemat/nanoaod_base_analysis.git --branch py3 nanoaod_base_analysis/
 source setup.sh
