@@ -8,7 +8,7 @@ from cmt.config.base_config import Config as cmt_config
 from config.qcd_datasets import Config as qcd_config
 from cmt.base_tasks.base import Task
 
-class Config(cmt_config):
+class Config(qcd_config, cmt_config):
     def add_categories(self, **kwargs):
         categories = [
             Category("base", "base", selection="nJet > -1"),
