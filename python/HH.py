@@ -14,7 +14,7 @@
 
 # ## Imports
 
-# In[133]:
+# In[ ]:
 
 
 # # %pip install uproot awkward numpy particle vector networkx matplotlib
@@ -38,7 +38,7 @@
 # %pip show uproot awkward numpy particle vector networkx matplotlib
 
 
-# In[134]:
+# In[ ]:
 
 
 import sys
@@ -58,13 +58,15 @@ import matplotlib.pyplot as plt
 import hist
 from hist import Hist
 from scipy import stats
+import mplhep as hep
+hep.style.use("CMS")
 
 
 # ## Common
 
 # ### Settings
 
-# In[598]:
+# In[ ]:
 
 
 # DEBUG MODE
@@ -74,7 +76,7 @@ settings_ = immutable_dict({
     # Misc
     "debug":debug, 
     "nevents":10000 if not debug else 1,
-    "skip":0 if not debug else 1541,
+    "skip":0 if not debug else 315,
     "verbosity":0 if not debug else 2,
     # Kinematic thresholds
     "gen_pt_min":10.,
@@ -82,7 +84,7 @@ settings_ = immutable_dict({
     "off_pt_min":35.,
     "off_eta_max":2.5,
     "off_btag_min":0.55,
-    "sct_pt_min":20.,
+    "sct_pt_min":10.,
     "sct_eta_max":2.5,
     # Use only di-tau trigger, ParkingHH trigger, or the OR of both
     "option":["tautau","bb","bbtautau"][2],
@@ -93,7 +95,7 @@ settings_ = immutable_dict({
 
 # ### GEN
 
-# In[599]:
+# In[ ]:
 
 
 #############################################################################################
@@ -176,7 +178,7 @@ def print_decay_graph(events,idx):
 
 # ### Print
 
-# In[600]:
+# In[ ]:
 
 
 #############################################################################################
@@ -235,6 +237,18 @@ def print_summary(
 
 #############################################################################################
 #
+def print_matching_base(x):
+    if "match" not in x.fields or x.match is None: x["match"] = False #@@ Needed?
+    if "dr" not in x.fields or x.dr is None: x["dr"] = 9.99 #@@ Needed?
+    if "idx" not in x.fields or x.idx is None: x["idx"] = -1 #@@ Needed?
+    if "id" not in x.fields or x.id is None: x["id"] = -1 #@@ Needed?
+    pad = " "*6
+    basic = f"pt: {x.pt:5.1f}, eta: {x.eta:5.2f}, phi: {x.phi:5.2f}, id: {x.id:2.0f}"
+    match = f", dr: {x.dr:4.2f}, idx: {x.idx:2.0f}, match: {x.match:1.0f}"
+    return pad+basic+match
+
+#############################################################################################
+#
 def print_matching(gen,obj):
     if obj is None: #@@ dirty hack to broadcast to event-level if obj=None
         obj = ak.full_like(ak.num(gen,1),False,dtype=bool)
@@ -244,21 +258,26 @@ def print_matching(gen,obj):
         print(f"  Event {idx}:")
         print("    GEN:")
         if gen_ is None: gen_ = []
-        for x in gen_: 
+        for x in gen_:
             if x is None: continue
-            if x.id is None: x["id"] = -1 #@@ Needed?
-            print(f"      pt: {x.pt:5.1f}, eta: {x.eta:5.2f}, phi: {x.phi:5.2f}, id: {x.id:2.0f}, status: {x.status:.0f}, last_copy: {x.last_copy:.0f}")
+            base = print_matching_base(x)
+            # if x.id is None: x["id"] = -1 #@@ Needed?
+            # print(f"      pt: {x.pt:5.1f}, eta: {x.eta:5.2f}, phi: {x.phi:5.2f}, id: {x.id:2.0f}, status: {x.status:.0f}, last_copy: {x.last_copy:.0f}")
+            status = f", status: {x.status:.0f}, last_copy: {x.last_copy:.0f}"
+            print(base+status)
         print("    OBJ:")
         if obj_ is None or obj_ is False: obj_ = []
         for x in obj_:
             if x is None: continue
-            if x.match is None: x["match"] = False #@@ Needed?
-            if x.dr is None: x["dr"] = 9.99 #@@ Needed?
-            if x.gen is None: x["gen"] = -1 #@@ Needed?
-            if x.id is None: x["id"] = -1 #@@ Needed?
-            pad = " "*6
-            basic = f"pt: {x.pt:5.1f}, eta: {x.eta:5.2f}, phi: {x.phi:5.2f}, dr: {x.dr:4.2f}, id: {x.id:2.0f}"
-            match = f", gen: {x.gen:2.0f}, match: {x.match:1.0f}"
+            base = print_matching_base(x)
+            # if x.match is None: x["match"] = False #@@ Needed?
+            # if x.dr is None: x["dr"] = 9.99 #@@ Needed?
+            # if x.idx is None: x["idx"] = -1 #@@ Needed?
+            # if x.id is None: x["id"] = -1 #@@ Needed?
+            # pad = " "*6
+            # basic = f"pt: {x.pt:5.1f}, eta: {x.eta:5.2f}, phi: {x.phi:5.2f}, dr: {x.dr:4.2f}, id: {x.id:2.0f}"
+            # match = f", idx: {x.idx:2.0f}, match: {x.match:1.0f}"
+            # base=pad+basic+match
             trg = ""
             if "bits_ok" in x.fields: trg += f", bits_ok: {x.bits_ok if x.bits_ok is not None else -1:2.0f}"
             #if "bits"    in x.fields: trg += f", bits: {x.bits if x.bits is not None else 0:>032b}"
@@ -266,13 +285,12 @@ def print_matching(gen,obj):
                 bits_list, = np.where([x.bits >> i & 1 for i in range(32)]) # comma dereferences the tupl(np.array,)
                 bits_list = ", ".join([f'{x:.0f}' for x in bits_list])
                 trg += f", bits: {bits_list}"
-
-            print(pad+basic+match+trg)
+            print(base+trg)
 
 
 # ### Filters
 
-# In[601]:
+# In[ ]:
 
 
 #############################################################################################
@@ -285,7 +303,7 @@ def filter_events(events,passed):
 
 # ### Objects
 
-# In[602]:
+# In[ ]:
 
 
 #############################################################################################
@@ -321,7 +339,21 @@ def gen_objects(events):
     gen = objects(events,**kwargs)
     gen["id"] = abs(gen.id)
     gen["mother_id"] = abs(gen.id[gen.mother_idx])
+
+    # https://github.com/cms-sw/cmssw/blob/master/DataFormats/HepMCCandidate/interface/GenStatusFlags.h
+
+
+    # Is particle prompt (not from hadron, muon, or tau decay)
+    gen["is_prompt"] = (gen.status & (1 << 0) != 0)
+    # This particle is part of the hard process
+    gen["is_hard_process"] = (gen.status & (1 << 7) != 0)
+    # This particle is the direct descendant of a hard process particle of the same pdg id
+    gen["from_hard_process"] = (gen.status & (1 << 8) != 0)
+    # This particle is the first copy of the particle in the chain with the same pdg id
+    gen["first_copy"] = (gen.status & (1 << 12) != 0)
+    # This particle is the last copy of the particle in the chain with the same pdg id
     gen["last_copy"] = (gen.status & (1 << 13) != 0)
+
     return gen
 
 #############################################################################################
@@ -415,7 +447,7 @@ def L1Mu_objects(events):
 
 # ### Matching
 
-# In[603]:
+# In[ ]:
 
 
 #############################################################################################
@@ -426,21 +458,24 @@ def delta_phi(x):
 
 #############################################################################################
 #
-def geometric_matching(
-        gen,obj,
-        dr_max=0.3,dpt_min=0.2,dpt_max=2.0,
-        verbosity=0):
+def geometric_matching_base(gen,obj,direction="reco_to_gen",dr_max=0.3,dpt_min=0.2,dpt_max=2.0,verbosity=0):
 
-    # Create all possible pairs of reco and GEN objects (reco outer loop, GEN inner loop)
-    # [(obj1,gen1), (obj1,gen2), (obj2,gen1), (obj2,gen2), ...]
-    argpairs = ak.argcartesian([obj, gen], nested=True) 
-    pairs = ak.cartesian([obj, gen], nested=True)
+    # Pairs: all possible pairs of objects of type x and y (x = outer loop, y = inner loop)
+    # e.g. [(x1,y1), (x1,y2), (x2,y1), (x2,y2), ...] 
+    # "gen_to_reco" matching is where x = gen and y = obj
+    # "reco_to_gen" matching is where x = obj and y = gen
+
+    pairs = None
+    if    direction == "reco_to_gen": pairs = ak.cartesian([obj, gen], nested=True) 
+    elif  direction == "gen_to_reco": pairs = ak.cartesian([gen, obj], nested=True) 
+    else: raise ValueError(f'[geometric_matching_base] Unknown direction "{direction}"')
+    # print("pairs",pairs)
 
     # Unzip the pairs to get the reco and GEN objects separately and calc dPt, dEta, dPhi, dR
-    pairs_obj, pairs_gen = ak.unzip(pairs)
-    dpt  = pairs_obj.pt / pairs_gen.pt
-    deta = pairs_obj.eta - pairs_gen.eta
-    dphi = delta_phi(pairs_obj.phi - pairs_gen.phi)
+    pairs_y, pairs_x = ak.unzip(pairs)
+    dpt  = pairs_y.pt / pairs_x.pt if direction == "reco_to_gen" else pairs_x.pt / pairs_y.pt
+    deta = pairs_y.eta - pairs_x.eta
+    dphi = delta_phi(pairs_y.phi - pairs_x.phi)
     dr   = np.sqrt(deta**2 + dphi**2)
 
     #@@ Consider both geometric and pT matching ???
@@ -454,11 +489,13 @@ def geometric_matching(
     if dpt_max is not None: dr = ak.mask(dr,dpt < dpt_max)
     dr = ak.fill_none(dr,dr_none) # Set masked entries to dummy value
 
-    # For each GEN object, sort the reco objects by dR
-    dr_min = ak.firsts(ak.sort(dr,axis=-1),axis=-1)
+    # For each reco object, sort the GEN objects by dR
+    dr_sort = ak.sort(dr,axis=-1)
+    dr_min = ak.firsts(dr_sort,axis=-1)
 
     # Get the index of the reco object with the lowest dR
-    dr_min_idx = ak.firsts(ak.argsort(dr,axis=-1),axis=-1)
+    dr_min_sort = ak.argsort(dr,axis=-1)
+    dr_min_idx = ak.firsts(dr_min_sort,axis=-1)
 
     # Identify matches if smallest dR is less than the maximum allowed value
     matched = (dr_min is not None) & (dr_min < dr_max)
@@ -468,15 +505,27 @@ def geometric_matching(
     dr_min_idx = ak.mask(dr_min_idx,matched)
 
     # Replace None values with False
-    matched = ak.fill_none(matched,False)    # --> obj.match
-    dr_min = ak.fill_none(dr_min,dr_none)    # --> obj.dr
-    dr_min_idx = ak.fill_none(dr_min_idx,-1) # --> obj.gen
+    matched = ak.fill_none(matched,False)
+    dr_min = ak.fill_none(dr_min,dr_none)
+    dr_min_idx = ak.fill_none(dr_min_idx,-1)
 
-    # Store the results in the reco object
-    obj["match"] = matched
-    obj["dr"] = dr_min
-    obj["gen"] = dr_min_idx
+    # Store the results in the reco or GEN object
+    if  direction == "reco_to_gen":
+        obj["match"] = matched
+        obj["dr"] = dr_min
+        obj["idx"] = dr_min_idx
+    else:
+        gen["match"] = matched
+        gen["dr"] = dr_min
+        gen["idx"] = dr_min_idx
 
+    return gen,obj
+
+#############################################################################################
+#
+def geometric_matching(gen,obj,dr_max=0.3,dpt_min=0.2,dpt_max=2.0,verbosity=0):
+    gen,obj = geometric_matching_base(gen,obj,direction="reco_to_gen",dr_max=dr_max,dpt_min=dpt_min,dpt_max=dpt_max,verbosity=verbosity)
+    gen,obj = geometric_matching_base(gen,obj,direction="gen_to_reco",dr_max=dr_max,dpt_min=dpt_min,dpt_max=dpt_max,verbosity=verbosity)
     return gen,obj
 
 #############################################################################################
@@ -504,8 +553,8 @@ def object_matching_base(
     # Match GEN and reco objects
     gen,obj = geometric_matching(gen,obj,dr_max=dr_max,dpt_min=dpt_min,dpt_max=dpt_max,verbosity=verbosity)
     
-    # Reset gen index to -1 for unmatched objects
-    #obj["gen"] = ak.fill_none(ak.mask(obj.gen,obj.match),-1) # No longer needed?
+    # Reset matching index to -1 for unmatched objects
+    #obj["idx"] = ak.fill_none(ak.mask(obj.idx,obj.match),-1) # No longer needed?
 
     # Count the number of matched objects
     num_matched = ak.count_nonzero(obj.match, axis=-1)
@@ -540,7 +589,7 @@ def object_matching(
         dr_max=0.3,dpt_min=0.2,dpt_max=2.0,
         label=None,
         verbosity=0):
-    all_matched,_,_ = object_matching_base(
+    all_matched,gen,obj = object_matching_base(
         gen,
         obj,
         passed=passed,
@@ -561,6 +610,7 @@ def trigger_matching(
     trg_id_filter=None,
     trg_bits_filter=None,
     n=4,dr_max=0.3,dpt_min=0.2,dpt_max=2.0,
+    label="[trigger_matching]",
     verbosity=0):
 
     # Filter objects depending if passed
@@ -602,7 +652,7 @@ def trigger_matching(
     obj["match"] = obj.match & obj.bits_ok
      
     # Reset gen index to -1 for unmatched objects (given the above mask is used!)
-    obj["gen"] = ak.fill_none(ak.mask(obj.gen,obj.match),-1)
+    obj["idx"] = ak.fill_none(ak.mask(obj.idx,obj.match),-1)
 
     # Count the number of matched objects
     num_matched = ak.count_nonzero(obj.match, axis=-1)
@@ -630,7 +680,7 @@ def trigger_matching(
 
 # ### Trigger
 
-# In[604]:
+# In[ ]:
 
 
 #############################################################################################
@@ -669,21 +719,181 @@ def HLT_passing(events,path,verbosity=0):
 
 # ### Plotting
 
-# In[699]:
+# In[ ]:
 
 
 #############################################################################################
 # https://github.com/scikit-hep/hist/blob/ce6e5996cb6de4d1e331dff4a911aaf5d4c8e114/src/hist/intervals.py#L78C1-L110
 # http://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval
-def clopper_pearson_interval(numer,denom,coverage=None):
+def clopper_pearson_interval(numer,denom,coverage=None,relative=False):
     if coverage is None:
         coverage = stats.norm.cdf(1) - stats.norm.cdf(-1)
+    efficiency = numer / denom
     interval_min = stats.beta.ppf((1 - coverage) / 2, numer, denom - numer + 1)
     interval_max = stats.beta.ppf((1 + coverage) / 2, numer + 1, denom - numer)
+    if relative:
+        interval_min = efficiency - interval_min
+        interval_max = interval_max - efficiency
     interval = np.stack((interval_min, interval_max))
-    interval[0, numer == 0.0] = 0.0
-    interval[1, numer == denom] = 1.0
+    if relative:
+        interval[0, numer == 0.0] = 0.0
+        interval[1, numer == denom] = 0.0
+    else:
+        interval[0, numer == 0.0] = 0.0
+        interval[1, numer == denom] = 1.0
     return interval
+
+#############################################################################################
+#
+def plot_sig_eff_vs_jet_rank(
+        events,label,
+        gen,        
+        pt_min,eta_max,
+        passed=None,
+        verbosity=0,
+        year=2023,com=13.6):
+
+    events = filter_events(events,passed)
+    jet = base_objects(events,label=label)
+    jet["in_acc"] = (jet.pt > pt_min) & (abs(jet.eta) < eta_max)
+    jet = jet[jet.in_acc]
+
+    # Match L1 jets
+    _,_,obj = object_matching_base(
+        gen,
+        jet,
+        passed=passed,
+        gen_id_filter=5,
+        n=4,
+        label="[plot_sig_eff_vs_jet_rank]", 
+        verbosity=verbosity)
+
+    assert ak.all(obj.pt == ak.sort(obj.pt, ascending=False, axis=-1)), "ak.array not sorted by pT!"
+
+    counts = []
+    njets_max = ak.max( ak.num(obj,axis=-1) ) 
+    for N in range(njets_max+1):
+        first_njets = obj[:,:N] # Consider only the first 'N' jets
+        mask = (ak.count_nonzero(first_njets.match,axis=-1) >=4) # Count at least 4 matches found in first N jets 
+        counts.append( ak.count_nonzero(ak.drop_none(mask)) ) # Count number of events satisfying above condition
+    total = counts[-1]
+
+    bins = np.linspace(-0.5,njets_max+0.5,num=njets_max+2,endpoint=True)
+    centers = (bins[:-1] + bins[1:]) / 2
+    plt.style.use([hep.style.CMS, hep.style.firamath])
+    fig,ax = plt.subplots(figsize=(10,9))
+    yerrs = clopper_pearson_interval(np.array(counts), np.array([total]*len(counts)),relative=True)
+    ax.errorbar(centers,counts/total,xerr=None,yerr=yerrs,linestyle="None",color="red",marker="o",label="Data",markersize=8)
+    plt.xlabel("Number of L1 jets considered")
+    plt.ylabel("Cumulative efficiency")
+    ax.set_xlim([bins[0],bins[-1]])
+    ax.set_ylim([0.,1.])
+    hep.cms.label("Preliminary",data=False, year=year, com=com)
+
+#############################################################################################
+#
+def plot_perf_vs_jet_pt(
+        events,label,
+        gen,
+        pt_min,eta_max,
+        perf="eff",
+        passed=None,
+        verbosity=0,
+        year=2023,com=13.6):
+
+    events = filter_events(events,passed)
+    jet = base_objects(events,label=label)
+    jet["in_acc"] = (jet.pt > pt_min) & (abs(jet.eta) < eta_max)
+    jet = jet[jet.in_acc]
+
+    # Match L1 jets
+    _,gen,jet = object_matching_base(
+        gen,
+        jet,
+        passed=passed,
+        gen_id_filter=5,
+        n=4,
+        label="[plot_sig_eff_vs_jet_rank]", 
+        verbosity=verbosity)
+
+    if perf == "eff":
+        denom = ak.ravel(gen.pt)
+        numer = ak.ravel(ak.drop_none(ak.mask(gen.pt,gen.match)))
+    elif perf == "purity":
+        denom = ak.ravel(jet.pt)
+        numer = ak.ravel(ak.drop_none(ak.mask(jet.pt,jet.match)))
+    else:
+        raise ValueError(f"Unknown performance metric '{perf}'")        
+
+    nbins, start, stop = 41, 0., 205.
+    h_denom,bins = np.histogram(denom, bins=nbins, range=(start, stop))
+    h_numer,_    = np.histogram(numer, bins=nbins, range=(start, stop))
+    centers = (bins[:-1] + bins[1:]) / 2
+    #print("bins",bins)
+    #print("h_denom",h_denom)
+    #print("h_numer",h_numer)
+    
+    plt.style.use([hep.style.CMS, hep.style.firamath])
+    fig,ax1 = plt.subplots(figsize=(10,9))
+    ax2 = ax1.twinx()
+
+    effs = h_numer / h_denom
+    yerrs = clopper_pearson_interval(np.array(h_numer), np.array(h_denom),relative=True)
+    
+    ax1.errorbar(
+        centers,
+        effs,
+        xerr=None,
+        yerr=yerrs,
+        linestyle="None",
+        color="black",
+        marker="o",
+        label="Data",
+        )
+
+    hep.histplot(
+        [h_denom,h_numer],
+        stack=False,
+        bins=bins,
+        histtype="fill",
+        color=["blue","red"],
+        alpha=0.5,
+        edgecolor="black",
+        label=["Denom","Numer"],
+        ax=ax2,
+        )
+
+    if perf == "eff":
+        ax1.set_xlabel("GEN b quark p$_{T}$ [GeV]")
+        ax1.set_ylabel("Efficiency")
+    elif perf == "purity":
+        ax1.set_xlabel("L1 jet p$_{T}$ [GeV]")
+        ax1.set_ylabel("Purity")
+    width = (stop - start) / nbins
+    ax2.set_ylabel(f"Entries / {width:.0f} GeV")
+    ax1.set_xlim(start,stop)
+    ax2.set_xlim(start,stop)
+    ax1.set_ylim(0.,1.)
+    ax2.set_ylim(0.,max(max(h_denom),max(h_numer))*1.05)
+    hep.cms.label("Preliminary",data=False, year=year, com=com)
+
+#############################################################################################
+#
+def plot_eff_vs_jet_pt(
+        events,label,gen,pt_min,eta_max,
+        passed=None,verbosity=0,year=2023,com=13.6):
+    plot_perf_vs_jet_pt(
+        events,label,gen,pt_min,eta_max,
+        perf="eff",passed=passed,verbosity=verbosity,year=year,com=com)
+
+#############################################################################################
+#
+def plot_purity_vs_jet_pt(
+        events,label,gen,pt_min,eta_max,
+        passed=None,verbosity=0,year=2023,com=13.6):
+    plot_perf_vs_jet_pt(
+        events,label,gen,pt_min,eta_max,
+        perf="purity",passed=passed,verbosity=verbosity,year=year,com=com)
 
 #############################################################################################
 #
@@ -759,7 +969,7 @@ def plot_efficiency(
 
 # ### LOAD
 
-# In[700]:
+# In[ ]:
 
 
 #############################################################################################
@@ -805,7 +1015,7 @@ def load_data_bbbb(nevents=None,skip=0,verbosity=0):
 
 # ### ACC
 
-# In[701]:
+# In[ ]:
 
 
 #############################################################################################
@@ -814,10 +1024,13 @@ def GEN_acceptance_bbbb(events,pt_min,eta_max,verbosity=0):
 
     # Create objects from GEN particle info
     gen = gen_objects(events)
+    gen = gen[ak.argsort(gen.pt, ascending=False, axis=-1)]
 
     # Identify interesting daughters (b-quarks) from Higgs decay
     #gen["daughter"] = (gen.id == 5) & (gen.mother_id == 25)
-    gen["daughter"] = (gen.id == 5) & (gen.last_copy == 1)
+    is_first_copy = (gen.first_copy == 1) & (gen.is_hard_process == 1)
+    is_last_copy = (gen.last_copy == 1) & (gen.from_hard_process == 1)
+    gen["daughter"] = (gen.id == 5) & is_last_copy & ~is_first_copy & gen.is_prompt
     daughter_idx = ak.mask(ak.local_index(gen.daughter),gen.daughter)
 
     # Filter GEN particles to keep only b-quarks from Higgs decay
@@ -848,7 +1061,7 @@ def GEN_acceptance_bbbb(events,pt_min,eta_max,verbosity=0):
 
 # ### L1T
 
-# In[702]:
+# In[ ]:
 
 
 #############################################################################################
@@ -869,6 +1082,7 @@ def L1T_matching_bbbb(events,gen,passed=None,verbosity=0):
         passed=passed,
         gen_id_filter=5,
         n=4,
+        #dr_max=0.3,dpt_min=0.2,dpt_max=2.0, # these are the default values
         label="[L1T_matching_bbbb]",
         verbosity=verbosity)
     return matched_L1T
@@ -876,7 +1090,7 @@ def L1T_matching_bbbb(events,gen,passed=None,verbosity=0):
 
 # ### HLT
 
-# In[703]:
+# In[ ]:
 
 
 #############################################################################################
@@ -930,7 +1144,7 @@ def HLT_matching_bbbb(events,gen,passed=None,verbosity=0):
 
 # ### OFF
 
-# In[704]:
+# In[ ]:
 
 
 #############################################################################################
@@ -943,7 +1157,7 @@ def OFF_matching_bbbb(events,gen,pt_min,eta_max,btag_min=0.,passed=None,verbosit
     jet["in_acc"] = (jet.pt > pt_min) & (abs(jet.eta) < eta_max)
     jet = jet[jet.in_acc]
 
-    matched_OFF_jets = object_matching(
+    matched_OFF_jets,gen_,jet_ = object_matching_base(
         gen,
         jet,
         passed=passed,
@@ -952,7 +1166,7 @@ def OFF_matching_bbbb(events,gen,pt_min,eta_max,btag_min=0.,passed=None,verbosit
         dr_max=0.3,dpt_min=0.2,dpt_max=2.0,
         label="[OFF_matching_bbbb]",
         verbosity=verbosity)
-    
+
     matched_OFF_bjets = object_matching(
         gen,
         jet[jet.btag >= btag_min], #@@ CURRENTLY OFFLINE B-TAGGING THRESHOLD IS ZERO TO BE CONISTENT WITH L1 SCOUTING CAPABILITIES IN RUN 3
@@ -970,7 +1184,7 @@ def OFF_matching_bbbb(events,gen,pt_min,eta_max,btag_min=0.,passed=None,verbosit
 
 # ### SCT
 
-# In[705]:
+# In[ ]:
 
 
 #############################################################################################
@@ -1006,73 +1220,28 @@ def SCT_matching_bbbb(events,gen,pt_min,eta_max,passed=None,verbosity=0):
 
 # ### PLOT
 
-# In[710]:
+# In[ ]:
 
 
 #############################################################################################
 #
 def SCT_plot_sig_eff_vs_jet_rank_bbbb(events,gen,pt_min,eta_max,passed=None,verbosity=0):
+    plot_sig_eff_vs_jet_rank(events,"L1Jet",gen,pt_min,eta_max,passed=passed,verbosity=verbosity,year=2023,com=13.6)
 
-    events = filter_events(events,passed)
-    
-    # Extract L1 objects and filter to keep only those within acceptance
-    jet = L1Jet_objects(events)
-    jet["in_acc"] = (jet.pt > pt_min) & (abs(jet.eta) < eta_max)
-    jet = jet[jet.in_acc]
+#############################################################################################
+#
+def SCT_plot_eff_vs_jet_pt_bbbb(events,gen,pt_min,eta_max,passed=None,verbosity=0):
+    plot_eff_vs_jet_pt(events,"L1Jet",gen,pt_min,eta_max,passed=passed,verbosity=verbosity,year=2023,com=13.6)
 
-    # Match L1 jets
-    _,_,obj = object_matching_base(
-        gen,
-        jet,
-        passed=passed,
-        gen_id_filter=5,
-        n=4,
-        label="[SCT_plot_sig_eff_vs_jet_rank_bbbb]", 
-        verbosity=verbosity)
-
-    assert ak.all(obj.pt == ak.sort(obj.pt, ascending=False, axis=-1)), "ak.array not sorted by pT!"
-
-    # print("TEST")
-    # njets = ak.num(obj,axis=-1)
-    # mask = (njets==9)
-    # obj = ak.mask(obj,mask)
-    # nmatched = ak.count_nonzero(obj.match,axis=-1)
-    # nmatched = ak.drop_none(nmatched)
-    # h = hist.Hist(hist.axes.Regular(6, 0, 6, name="x",label="nmatched (njets == 9)"))
-    # h.fill(x=nmatched)
-    # h = h / h.sum()
-    # fig, ax = plt.subplots()
-    # h.plot(ax=ax)
-    # plt.savefig("plot9.pdf")
-
-    # njets = ak.num(obj,axis=-1)
-    # denom = [(n,ak.num(ak.drop_none(ak.mask(njets,njets>=n)),axis=0)) for n in range(ak.max(njets+1))]
-    # mask = (ak.count_nonzero(obj.match,axis=-1) >= 4) # At least 4 L1 jets matched to GEN in the event
-    # njets = ak.mask(njets,mask)
-    # numer = [(n,ak.num(ak.drop_none(ak.mask(njets,njets>=n)),axis=0)) for n in range(ak.max(njets+1))]
-
-    denom = ak.num(obj,axis=-1)
-    mask = (ak.count_nonzero(obj.match,axis=-1) >= 4) # At least 4 L1 jets matched to GEN in the event
-    numer = ak.mask(denom,mask)
-
-    denom = ak.drop_none(denom)
-    numer = ak.drop_none(numer)
-
-    print("denom",denom)
-    print("numer",numer)
-
-    xmin = -0.5
-    xmax = int(max(max(numer),max(denom))) - 0.5
-    xbins = xmax - xmin
-    plot_efficiency(
-        numer,denom,
-        xbins=xbins,xmin=xmin,xmax=xmax,
-        filename="SCT_plot_sig_eff_vs_jet_rank_bbbb.pdf")
+#############################################################################################
+#
+def SCT_plot_purity_vs_jet_pt_bbbb(events,gen,pt_min,eta_max,passed=None,verbosity=0):
+    plot_purity_vs_jet_pt(events,"L1Jet",gen,pt_min,eta_max,passed=passed,verbosity=verbosity,year=2023,com=13.6)
 
 
 # ### EXECUTE
 
-# In[711]:
+# In[ ]:
 
 
 def selections_bbbb(**kwargs):
@@ -1107,8 +1276,11 @@ def selections_bbbb(**kwargs):
     matched_OFF = OFF_matching_bbbb(events,gen,pt_min=off_pt_min,eta_max=off_eta_max,btag_min=off_btag_min,passed=matched_HLT,verbosity=verbosity)
     matched_SCT = SCT_matching_bbbb(events,gen,pt_min=sct_pt_min,eta_max=sct_eta_max,passed=passed_GEN,verbosity=verbosity)
 
-    # Plotting 
-    SCT_plot_sig_eff_vs_jet_rank_bbbb(events,gen,pt_min=sct_pt_min,eta_max=sct_eta_max,passed=passed_GEN,verbosity=verbosity)
+    # Plotting (only plot once)
+    if use_matched == False:
+        SCT_plot_sig_eff_vs_jet_rank_bbbb(events,gen,pt_min=sct_pt_min,eta_max=sct_eta_max,passed=passed_GEN,verbosity=verbosity)
+        SCT_plot_eff_vs_jet_pt_bbbb(events,gen,pt_min=sct_pt_min,eta_max=sct_eta_max,passed=passed_GEN,verbosity=verbosity)
+        SCT_plot_purity_vs_jet_pt_bbbb(events,gen,pt_min=sct_pt_min,eta_max=sct_eta_max,passed=passed_GEN,verbosity=verbosity)
 
     print_summary(
         events,
@@ -1126,16 +1298,16 @@ settings = settings_.copy()
 settings.update({"off_btag_min":0.})
 print(settings)
 selections_bbbb(**settings)
-# settings.update({"use_matched":True})
-# print(settings)
-# selections_bbbb(**settings)
+settings.update({"use_matched":True})
+print(settings)
+selections_bbbb(**settings)
 
 
 # ## bbtautau (Run 3)
 
 # ### LOAD
 
-# In[19]:
+# In[ ]:
 
 
 #############################################################################################
@@ -1184,7 +1356,7 @@ def load_data_bbtautau(nevents=None,skip=0,verbosity=0):
 
 # ### ACC
 
-# In[20]:
+# In[ ]:
 
 
 #############################################################################################
@@ -1255,7 +1427,7 @@ def GEN_acceptance_bbtautau(events,pt_min,eta_max,verbosity=0):
 
 # ### L1T
 
-# In[21]:
+# In[ ]:
 
 
 #############################################################################################
@@ -1321,7 +1493,7 @@ def L1T_matching_bbtautau(events,gen,passed=None,option=None,verbosity=0):
 
 # ### HLT
 
-# In[22]:
+# In[ ]:
 
 
 #############################################################################################
@@ -1497,7 +1669,7 @@ def OFF_matching_bbtautau(events,gen,pt_min=35.,eta_max=2.5,btag_min=0.,passed=N
 
 # ### SCT
 
-# In[24]:
+# In[ ]:
 
 
 #############################################################################################
@@ -1653,7 +1825,7 @@ selections_bbtautau(**settings)
 
 # ### LOAD
 
-# In[713]:
+# In[ ]:
 
 
 #############################################################################################
@@ -1701,7 +1873,7 @@ def load_data_bbbb_phase2(nevents=None,skip=0,verbosity=0):
 
 # ### ACC
 
-# In[714]:
+# In[ ]:
 
 
 #############################################################################################
@@ -1712,7 +1884,7 @@ def GEN_acceptance_bbbb_phase2(events,pt_min,eta_max,verbosity=0):
 
 # ### L1T
 
-# In[715]:
+# In[ ]:
 
 
 #############################################################################################
@@ -1733,7 +1905,7 @@ def L1T_matching_bbbb_phase2(events,gen,passed=None,verbosity=0):
 
 # ### HLT
 
-# In[716]:
+# In[ ]:
 
 
 #############################################################################################
@@ -1769,7 +1941,7 @@ def HLT_matching_bbbb_phase2(events,gen,passed=None,verbosity=0):
 
 # ### OFF
 
-# In[717]:
+# In[ ]:
 
 
 #############################################################################################
@@ -1809,7 +1981,7 @@ def OFF_matching_bbbb_phase2(events,gen,pt_min,eta_max,btag_min=0.,passed=None,v
 
 # ### SCT
 
-# In[718]:
+# In[ ]:
 
 
 #############################################################################################
@@ -1861,46 +2033,22 @@ def SCT_matching_bbbb_phase2(events,gen,pt_min,eta_max,passed=None,verbosity=0):
 #############################################################################################
 #
 def SCT_plot_sig_eff_vs_jet_rank_bbbb_phase2(events,gen,pt_min,eta_max,passed=None,verbosity=0):
+    plot_sig_eff_vs_jet_rank(events,"L1DisplacedJet",gen,pt_min,eta_max,passed=passed,verbosity=verbosity,year="Phase 2",com=14)
 
-    events = filter_events(events,passed)
-    
-    # Extract L1 displaced jets and filter to keep only those within acceptance
-    djet = L1DJet_objects(events)
-    djet["in_acc"] = (djet.pt > pt_min) & (abs(djet.eta) < eta_max)
-    djet = djet[djet.in_acc]
+#############################################################################################
+#
+def SCT_plot_eff_vs_jet_pt_bbbb_phase2(events,gen,pt_min,eta_max,passed=None,verbosity=0):
+    plot_eff_vs_jet_pt(events,"L1DisplacedJet",gen,pt_min,eta_max,passed=passed,verbosity=verbosity,year="Phase 2",com=14)
 
-    # Match L1 jets
-    _,_,obj = object_matching_base(
-        gen,
-        djet,
-        passed=passed,
-        gen_id_filter=5,
-        n=4,
-        label="[SCT_plot_sig_eff_vs_jet_rank_bbbb_phase2]", 
-        verbosity=verbosity)
-    
-    assert ak.all(obj.pt == ak.sort(obj.pt, ascending=False, axis=-1)), "ak.array not sorted by pT!"
-
-    denom = ak.num(obj,axis=-1)
-    mask = (ak.count_nonzero(obj.match,axis=-1) >= 4)
-    numer = ak.mask(denom,mask)
-    
-    denom = ak.drop_none(denom)
-    numer = ak.drop_none(numer)
-
-    xmin = -0.5
-    xmax = int(max(max(numer),max(denom))) + 0.5
-    xbins = xmax - xmin
-    plot_efficiency(
-        numer,denom,
-        xbins=xbins,xmin=xmin,xmax=xmax,
-        filename="SCT_plot_sig_eff_vs_jet_rank_bbbb.pdf")
-    
+#############################################################################################
+#
+def SCT_plot_purity_vs_jet_pt_bbbb_phase2(events,gen,pt_min,eta_max,passed=None,verbosity=0):
+    plot_purity_vs_jet_pt(events,"L1DisplacedJet",gen,pt_min,eta_max,passed=passed,verbosity=verbosity,year="Phase 2",com=14)
 
 
 # ### EXECUTE
 
-# In[721]:
+# In[ ]:
 
 
 def selections_bbbb_phase2(**kwargs):
@@ -1935,8 +2083,11 @@ def selections_bbbb_phase2(**kwargs):
     matched_OFF = OFF_matching_bbbb_phase2(events,gen,pt_min=off_pt_min,eta_max=off_eta_max,btag_min=off_btag_min,passed=matched_HLT,verbosity=verbosity)
     matched_SCT = SCT_matching_bbbb_phase2(events,gen,pt_min=sct_pt_min,eta_max=sct_eta_max,passed=passed_GEN,verbosity=verbosity)
 
-    # Plotting 
-    SCT_plot_sig_eff_vs_jet_rank_bbbb_phase2(events,gen,pt_min=sct_pt_min,eta_max=sct_eta_max,passed=passed_GEN,verbosity=verbosity)
+    # Plotting (only plot once)
+    if use_matched == False:
+        SCT_plot_sig_eff_vs_jet_rank_bbbb_phase2(events,gen,pt_min=sct_pt_min,eta_max=sct_eta_max,passed=passed_GEN,verbosity=verbosity)
+        SCT_plot_eff_vs_jet_pt_bbbb_phase2(events,gen,pt_min=sct_pt_min,eta_max=sct_eta_max,passed=passed_GEN,verbosity=verbosity)
+        SCT_plot_purity_vs_jet_pt_bbbb_phase2(events,gen,pt_min=sct_pt_min,eta_max=sct_eta_max,passed=passed_GEN,verbosity=verbosity)
 
     print_summary(
         events,
@@ -1962,7 +2113,7 @@ selections_bbbb_phase2(**settings)
 
 # ### LOAD
 
-# In[34]:
+# In[ ]:
 
 
 #############################################################################################
@@ -2014,7 +2165,7 @@ def load_data_bbtautau_phase2(nevents=None,skip=0,verbosity=0):
 
 # ### ACC
 
-# In[35]:
+# In[ ]:
 
 
 #############################################################################################
@@ -2025,7 +2176,7 @@ def GEN_acceptance_bbtautau_phase2(events,pt_min,eta_max,verbosity=0):
 
 # ### L1T
 
-# In[36]:
+# In[ ]:
 
 
 #############################################################################################
@@ -2091,7 +2242,7 @@ def L1T_matching_bbtautau_phase2(events,gen,passed=None,option=None,verbosity=0)
 
 # ### HLT
 
-# In[37]:
+# In[ ]:
 
 
 #############################################################################################
@@ -2253,7 +2404,7 @@ def OFF_matching_bbtautau_phase2(events,gen,pt_min=35.,eta_max=2.5,btag_min=0.,p
 
 # ### SCT
 
-# In[39]:
+# In[ ]:
 
 
 #############################################################################################
@@ -2411,7 +2562,7 @@ selections_bbtautau_phase2(**settings)
 
 # ### LOAD
 
-# In[41]:
+# In[ ]:
 
 
 #############################################################################################
@@ -2459,7 +2610,7 @@ def load_data_bbbb_muon(nevents=None,skip=0,verbosity=0):
 
 # ### ACC
 
-# In[42]:
+# In[ ]:
 
 
 #############################################################################################
@@ -2695,7 +2846,7 @@ def OFF_matching_bbbb_muon(events,gen,passed=None,option=None,verbosity=0):
 
 # ### SCT
 
-# In[46]:
+# In[ ]:
 
 
 #############################################################################################
