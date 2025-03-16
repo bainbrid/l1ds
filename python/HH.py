@@ -330,18 +330,13 @@ def base_objects(events,label,id=None):
 #############################################################################################
 #
 def gen_objects(events):
-    kwargs = {
-        "pt":"GenPart_pt", "eta":"GenPart_eta", "phi":"GenPart_phi", # Kine
-        "id":"GenPart_pdgId",
-        "mother_idx":"GenPart_genPartIdxMother",
-        "status":"GenPart_statusFlags",
-    }
-    gen = objects(events,**kwargs)
-    gen["id"] = abs(gen.id)
+    gen = base_objects(events,label="GenPart")
+    gen["id"] = abs(events["GenPart_pdgId"])
+    gen["mother_idx"] = events["GenPart_genPartIdxMother"]
     gen["mother_id"] = abs(gen.id[gen.mother_idx])
+    gen["status"] = events["GenPart_statusFlags"]
 
     # https://github.com/cms-sw/cmssw/blob/master/DataFormats/HepMCCandidate/interface/GenStatusFlags.h
-
 
     # Is particle prompt (not from hadron, muon, or tau decay)
     gen["is_prompt"] = (gen.status & (1 << 0) != 0)
@@ -359,63 +354,40 @@ def gen_objects(events):
 #############################################################################################
 #
 def jet_objects(events):
-    kwargs = {
-        "pt":"Jet_pt", "eta":"Jet_eta", "phi":"Jet_phi", # Kine
-        "id":ak.full_like(events["Jet_pt"],1),
-        "btag":"Jet_btagPNetB",
-    }
-    jet = objects(events,**kwargs)
+    jet = base_objects(events,label="Jet",id=1)
     jet["btag"] = events["Jet_btagPNetB"]
     return jet
 
 #############################################################################################
 #
 def tau_objects(events):
-    kwargs = {
-        "pt":"Tau_pt", "eta":"Tau_eta", "phi":"Tau_phi", # Kine
-        "id":ak.full_like(events["Tau_pt"],15),
-    }
-    return objects(events,**kwargs)
+    return base_objects(events,label="Tau",id=15)
 
 #############################################################################################
 #
 def muon_objects(events):
-    kwargs = {
-        "pt":"Muon_pt", "eta":"Muon_eta", "phi":"Muon_phi", # Kine
-        "id":ak.full_like(events["Muon_pt"],13),
-        "dxy":"Muon_dxy",
-        "dxyerr":"Muon_dxyErr",
-        "dxysig":events["Muon_dxy"]/events["Muon_dxyErr"],
-    }
-    return objects(events,**kwargs)
+    muon = base_objects(events,label="Muon",id=13)
+    muon["dxy"] = events["Muon_dxy"]
+    muon["dxyerr"] = events["Muon_dxyErr"]
+    muon["dxysig"] = muon.dxy/muon.dxyerr
+    return muon
 
 #############################################################################################
 #
 def L1Jet_objects(events):
-    kwargs = {
-        "pt":"L1Jet_pt", "eta":"L1Jet_eta", "phi":"L1Jet_phi", # Kine
-        "id":ak.full_like(events["L1Jet_pt"],1),
-    }
-    return objects(events,**kwargs)
+    return base_objects(events,label="L1Jet",id=1)
 
 #############################################################################################
 #
 def L1DJet_objects(events):
-    kwargs = {
-        "pt":"L1DisplacedJet_pt", "eta":"L1DisplacedJet_eta", "phi":"L1DisplacedJet_phi", # Kine
-        "id":ak.full_like(events["L1DisplacedJet_pt"],1),
-        "btag":"L1DisplacedJet_btagScore",
-    }
-    return objects(events,**kwargs)
+    jet = base_objects(events,label="L1DisplacedJet",id=1)
+    jet["btag"] = events["L1DisplacedJet_btagScore"]
+    return jet
 
 #############################################################################################
 #
 def L1Tau_objects(events):
-    kwargs = {
-        "pt":"L1Tau_pt", "eta":"L1Tau_eta", "phi":"L1Tau_phi", # Kine
-        "id":ak.full_like(events["L1Tau_pt"],15),
-    }
-    return objects(events,**kwargs)
+    return base_objects(events,label="L1Tau",id=15)
 
 #############################################################################################
 #
@@ -425,24 +397,19 @@ def L1TauP2_objects(events):
 #############################################################################################
 #
 def HLT_objects(events):
-    kwargs = {
-        "pt":"TrigObj_pt", "eta":"TrigObj_eta", "phi":"TrigObj_phi", # Kine
-        "id":"TrigObj_id",
-        "bits":"TrigObj_filterBits"
-    }
-    return objects(events,**kwargs)
+    hlt = base_objects(events,label="TrigObj")
+    hlt["id"] = events["TrigObj_id"]
+    hlt["bits"] = events["TrigObj_filterBits"]
+    return hlt
 
 #############################################################################################
 #
 def L1Mu_objects(events):
-    kwargs = {
-        "pt":"L1Mu_pt", "eta":"L1Mu_eta", "phi":"L1Mu_phi", # Kine
-        "etaAtVtx":"L1Mu_etaAtVtx",
-        "phiAtVtx":"L1Mu_phiAtVtx",
-        "id":ak.full_like(events["L1Mu_pt"],13),
-        "qual":"L1Mu_hwQual",
-    }
-    return objects(events,**kwargs)
+    muon = base_objects(events,label="L1Mu",id=13)
+    muon["qual"] = events["L1Mu_hwQual"]
+    muon["etaAtVtx"] = events["L1Mu_etaAtVtx"]
+    muon["phiAtVtx"] = events["L1Mu_phiAtVtx"]
+    return muon
 
 
 # ### Matching
@@ -589,7 +556,7 @@ def object_matching(
         dr_max=0.3,dpt_min=0.2,dpt_max=2.0,
         label=None,
         verbosity=0):
-    all_matched,gen,obj = object_matching_base(
+    all_matched,_,_ = object_matching_base(
         gen,
         obj,
         passed=passed,
@@ -602,21 +569,21 @@ def object_matching(
 
 #############################################################################################
 #
-def trigger_matching(
+def hlt_matching_base(
     gen, 
-    trg,
+    hlt,
     passed=None,
     gen_id_filter=None,
-    trg_id_filter=None,
-    trg_bits_filter=None,
+    hlt_id_filter=None,
+    hlt_bits_filter=None,
     n=4,dr_max=0.3,dpt_min=0.2,dpt_max=2.0,
-    label="[trigger_matching]",
+    label="[hlt_matching_base]",
     verbosity=0):
 
     # Filter objects depending if passed
     if passed is not None:
         gen = ak.mask(gen,passed)
-        trg = ak.mask(trg,passed)
+        hlt = ak.mask(hlt,passed)
 
     # Filter the GEN objects by PDG ID
     if gen_id_filter is not None:
@@ -626,27 +593,28 @@ def trigger_matching(
     # Filter the trigger objects by ID (1=Jet, 2=MET, 3=HT, 4=MHT, 11=ele, 13=muon, 15=tau, 22=photon)
     # Defined here: search "id = cms.int32(?)"
     # https://github.com/cms-sw/cmssw/blob/master/PhysicsTools/NanoAOD/python/triggerObjects_cff.py
-    if trg_id_filter is not None:
-        trg_id_mask = (trg.id == trg_id_filter)
-        trg = trg[trg_id_mask]
+    if hlt_id_filter is not None:
+        hlt_id_mask = (hlt.id == hlt_id_filter)
+        hlt = hlt[hlt_id_mask]
 
     if verbosity>=1: 
         print()
-        if trg_bits_filter is not None:
-            print(f"Trigger bits filter: {', '.join([f'{x:.0f}' for x in trg_bits_filter])}")
+        if hlt_bits_filter is not None:
+            print(f"Trigger bits filter: {', '.join([f'{x:.0f}' for x in hlt_bits_filter])}")
         else:
             print(f"Trigger bits filter: no filter applied!")
 
     # Check if all required trigger bits are set
-    trg["bits_ok"] = ak.full_like(trg.bits,True,dtype=bool)
-    if trg_bits_filter is not None:
-        trg_bits_values = [2**i for i in trg_bits_filter]
-        trg_bits_filter = np.sum(trg_bits_values)
-        trg_bits_filter = ak.full_like(trg.bits,trg_bits_filter)
-        trg["bits_ok"] = (trg.bits & trg_bits_filter) == trg_bits_filter
+    if "bits" not in hlt.fields: hlt["bits"] = ak.full_like(hlt.pt,0,dtype=int)
+    hlt["bits_ok"] = ak.full_like(hlt.pt,True,dtype=bool)
+    if hlt_bits_filter is not None:
+        hlt_bits_values = [2**i for i in hlt_bits_filter]
+        hlt_bits_filter = np.sum(hlt_bits_values)
+        hlt_bits_filter = ak.full_like(hlt.bits,hlt_bits_filter)
+        hlt["bits_ok"] = (hlt.bits & hlt_bits_filter) == hlt_bits_filter
         
     # Match GEN and trigger objects
-    gen,obj = geometric_matching(gen,trg,dr_max=dr_max,dpt_min=dpt_min,dpt_max=dpt_max,verbosity=verbosity)
+    gen,obj = geometric_matching(gen,hlt,dr_max=dr_max,dpt_min=dpt_min,dpt_max=dpt_max,verbosity=verbosity)
     
     # Require objects to be geometrically matched and have the correct trigger bits set
     obj["match"] = obj.match & obj.bits_ok
@@ -675,6 +643,24 @@ def trigger_matching(
         #tmp = obj[obj.match]   # Print objects only if matched
         print_matching(gen,tmp)
 
+    return all_matched,gen,obj
+
+#############################################################################################
+#
+def hlt_matching(
+    gen, 
+    trg,
+    passed=None,
+    gen_id_filter=None,
+    hlt_id_filter=None,
+    hlt_bits_filter=None,
+    n=4,dr_max=0.3,dpt_min=0.2,dpt_max=2.0,
+    label="[hlt_matching]",
+    verbosity=0):
+    all_matched,_,_ = hlt_matching_base(
+        gen,trg,
+        passed=passed,gen_id_filter=gen_id_filter,hlt_id_filter=hlt_id_filter,hlt_bits_filter=hlt_bits_filter,
+        n=n,dr_max=dr_max,dpt_min=dpt_min,dpt_max=dpt_max,label="[hlt_matching]",verbosity=verbosity)
     return all_matched
 
 
@@ -694,7 +680,7 @@ def L1T_passing(events,seed,verbosity=0):
 
     if verbosity>=1:
         print()
-        print("[L1_trigger_passing_bbbb]")
+        print("[L1T_passing_bbbb]")
         print(f"{seed} fired for the following events:")
         print(", ".join([f"{x}" for x in passed_idx]))
 
@@ -792,46 +778,67 @@ def plot_sig_eff_vs_jet_rank(
 
 #############################################################################################
 #
-def plot_perf_vs_jet_pt(
-        events,label,
+def plot_perf_vs_pt(
+        perf, # "eff" or "purity"
+        events,
+        label, # Label for the objects, e.g. "L1Jet"
         gen,
         pt_min,eta_max,
-        perf="eff",
         passed=None,
+        gen_id_filter=None,
+        hlt_id_filter=None,
+        hlt_bits_filter=None,
+        n=4,dr_max=0.3,dpt_min=0.2,dpt_max=2.0,
         verbosity=0,
-        year=2023,com=13.6):
+        **kwargs
+        ):
+
+    year = 2023 if "year" not in kwargs else kwargs["year"]
+    com = 13.6 if "com" not in kwargs else kwargs["com"]
+    nbins = 50 if "nbins" not in kwargs else kwargs["nbins"]
+    start = 0. if "start" not in kwargs else kwargs["start"]
+    stop = 100. if "stop" not in kwargs else kwargs["stop"]
+    xlabel = f"{label} p$_T$ [GeV]" if "xlabel" not in kwargs else kwargs["xlabel"]
+    ylabel = kwargs["ylabel"] if "ylabel" in kwargs else "Efficiency" if perf == "eff" else "Purity"
 
     events = filter_events(events,passed)
-    jet = base_objects(events,label=label)
-    jet["in_acc"] = (jet.pt > pt_min) & (abs(jet.eta) < eta_max)
-    jet = jet[jet.in_acc]
+    obj = base_objects(events,label=label)
+    obj["in_acc"] = (obj.pt > pt_min) & (abs(obj.eta) < eta_max)
+    obj = obj[obj.in_acc]
 
-    # Match L1 jets
-    _,gen,jet = object_matching_base(
-        gen,
-        jet,
-        passed=passed,
-        gen_id_filter=5,
-        n=4,
-        label="[plot_sig_eff_vs_jet_rank]", 
+    # _,gen,obj = object_matching_base(
+    #     gen,
+    #     obj,
+    #     passed=passed,
+    #     gen_id_filter=gen_id_filter,
+    #     n=4,
+    #     label="[plot_perf_vs_pt]", 
+    #     verbosity=verbosity)
+
+    # Match objects to GEN (HLT matching if hlt_bits given; otherwise just normal geometric matching)
+    _,gen,obj = hlt_matching_base(
+        gen, 
+        obj,
+        passed=None,
+        gen_id_filter=gen_id_filter,
+        hlt_id_filter=hlt_id_filter,
+        hlt_bits_filter=hlt_bits_filter,
+        n=4,dr_max=dr_max,dpt_min=dpt_min,dpt_max=dpt_max,
+        label="[plot_perf_vs_pt]",
         verbosity=verbosity)
 
     if perf == "eff":
         denom = ak.ravel(gen.pt)
         numer = ak.ravel(ak.drop_none(ak.mask(gen.pt,gen.match)))
     elif perf == "purity":
-        denom = ak.ravel(jet.pt)
-        numer = ak.ravel(ak.drop_none(ak.mask(jet.pt,jet.match)))
+        denom = ak.ravel(obj.pt)
+        numer = ak.ravel(ak.drop_none(ak.mask(obj.pt,obj.match)))
     else:
         raise ValueError(f"Unknown performance metric '{perf}'")        
 
-    nbins, start, stop = 41, 0., 205.
     h_denom,bins = np.histogram(denom, bins=nbins, range=(start, stop))
     h_numer,_    = np.histogram(numer, bins=nbins, range=(start, stop))
     centers = (bins[:-1] + bins[1:]) / 2
-    #print("bins",bins)
-    #print("h_denom",h_denom)
-    #print("h_numer",h_numer)
     
     plt.style.use([hep.style.CMS, hep.style.firamath])
     fig,ax1 = plt.subplots(figsize=(10,9))
@@ -848,7 +855,7 @@ def plot_perf_vs_jet_pt(
         linestyle="None",
         color="black",
         marker="o",
-        label="Data",
+        label="Eff" if perf == "eff" else "Purity",
         )
 
     hep.histplot(
@@ -864,8 +871,8 @@ def plot_perf_vs_jet_pt(
         )
 
     if perf == "eff":
-        ax1.set_xlabel("GEN b quark p$_{T}$ [GeV]")
-        ax1.set_ylabel("Efficiency")
+        ax1.set_xlabel(xlabel)
+        ax1.set_ylabel(ylabel)
     elif perf == "purity":
         ax1.set_xlabel("L1 jet p$_{T}$ [GeV]")
         ax1.set_ylabel("Purity")
@@ -876,24 +883,6 @@ def plot_perf_vs_jet_pt(
     ax1.set_ylim(0.,1.)
     ax2.set_ylim(0.,max(max(h_denom),max(h_numer))*1.05)
     hep.cms.label("Preliminary",data=False, year=year, com=com)
-
-#############################################################################################
-#
-def plot_eff_vs_jet_pt(
-        events,label,gen,pt_min,eta_max,
-        passed=None,verbosity=0,year=2023,com=13.6):
-    plot_perf_vs_jet_pt(
-        events,label,gen,pt_min,eta_max,
-        perf="eff",passed=passed,verbosity=verbosity,year=year,com=com)
-
-#############################################################################################
-#
-def plot_purity_vs_jet_pt(
-        events,label,gen,pt_min,eta_max,
-        passed=None,verbosity=0,year=2023,com=13.6):
-    plot_perf_vs_jet_pt(
-        events,label,gen,pt_min,eta_max,
-        perf="purity",passed=passed,verbosity=verbosity,year=year,com=com)
 
 #############################################################################################
 #
@@ -1111,13 +1100,13 @@ def HLT_matching_bbbb(events,gen,passed=None,verbosity=0):
 
     # All 4 jets
     print()
-    matched_HLT_4j = trigger_matching(
+    matched_HLT_4j = hlt_matching(
         gen,
         trg,
         passed=passed,
         gen_id_filter=5, # b quarks only
-        trg_id_filter=1, # Jets
-        trg_bits_filter=[3,12,28], # See above
+        hlt_id_filter=1, # Jets
+        hlt_bits_filter=[3,12,28], # See above
         n=4,
         dpt_min=None,dpt_max=None, # No requirements on delta pT
         label="[HLT_matching_bbbb]",
@@ -1125,13 +1114,13 @@ def HLT_matching_bbbb(events,gen,passed=None,verbosity=0):
 
     # Two b-jets
     print("[HLT_matching_bbbb]")
-    matched_HLT_2b = trigger_matching(
+    matched_HLT_2b = hlt_matching(
         gen,
         trg,
         passed=passed,
         gen_id_filter=5, # b quarks only
-        trg_id_filter=1, # Jets
-        trg_bits_filter=[26], # See above
+        hlt_id_filter=1, # Jets
+        hlt_bits_filter=[26], # See above
         n=2, # Just two jets
         dpt_min=None,dpt_max=None, # No requirements on delta pT
         label="[HLT_matching_bbbb]",
@@ -1231,12 +1220,28 @@ def SCT_plot_sig_eff_vs_jet_rank_bbbb(events,gen,pt_min,eta_max,passed=None,verb
 #############################################################################################
 #
 def SCT_plot_eff_vs_jet_pt_bbbb(events,gen,pt_min,eta_max,passed=None,verbosity=0):
-    plot_eff_vs_jet_pt(events,"L1Jet",gen,pt_min,eta_max,passed=passed,verbosity=verbosity,year=2023,com=13.6)
+    kwargs = {"year":2023, "com":13.6, "nbins":41, "start":0., "stop":205., "xlabel":"GEN b quark p$_{T}$ [GeV]"}
+    plot_perf_vs_pt(
+        "eff",events,"L1Jet",gen,
+        pt_min,eta_max,
+        passed=passed,
+        gen_id_filter=5,
+        n=4,dr_max=0.3,dpt_min=0.2,dpt_max=2.0,
+        verbosity=verbosity,
+        **kwargs)
 
 #############################################################################################
 #
 def SCT_plot_purity_vs_jet_pt_bbbb(events,gen,pt_min,eta_max,passed=None,verbosity=0):
-    plot_purity_vs_jet_pt(events,"L1Jet",gen,pt_min,eta_max,passed=passed,verbosity=verbosity,year=2023,com=13.6)
+    kwargs = {"year":2023, "com":13.6, "nbins":41, "start":0., "stop":205., "xlabel":"L1 jet p$_{T}$ [GeV]"}
+    plot_perf_vs_pt(
+        "purity",events,"L1Jet",gen,
+        pt_min,eta_max,
+        passed=passed,
+        gen_id_filter=5,
+        n=4,dr_max=0.3,dpt_min=0.2,dpt_max=2.0,
+        verbosity=verbosity,
+        **kwargs)
 
 
 # ### EXECUTE
@@ -1533,13 +1538,13 @@ def HLT_matching_tautau(events,gen,passed=None,verbosity=0):
     trg = HLT_objects(events)
 
     # DoubleTau trigger matching
-    matched_HLT = trigger_matching(
+    matched_HLT = hlt_matching(
         gen,
         trg,
         passed=passed,
         gen_id_filter=15, # taus only
-        trg_id_filter=15, # taus only
-        trg_bits_filter=[1,3,5,10], # See above
+        hlt_id_filter=15, # taus only
+        hlt_bits_filter=[1,3,5,10], # See above
         n=2, # Both taus
         dpt_min=None,dpt_max=None,
         verbosity=verbosity)
@@ -1556,25 +1561,25 @@ def HLT_matching_bb(events,gen,passed=None,verbosity=0):
     trg = HLT_objects(events)
 
     # All 4 jets
-    matched_HLT_4j = trigger_matching(
+    matched_HLT_4j = hlt_matching(
         gen,
         trg,
         passed=passed,
         gen_id_filter=5, # b quarks only
-        trg_id_filter=1, # Jets
-        trg_bits_filter=[3,12,28], # See above
+        hlt_id_filter=1, # Jets
+        hlt_bits_filter=[3,12,28], # See above
         n=2, # All four jets
         dpt_min=None,dpt_max=None, # No requirements on delta pT
         verbosity=verbosity)
 
     # Two b-jets
-    matched_HLT_2b = trigger_matching(
+    matched_HLT_2b = hlt_matching(
         gen,
         trg,
         passed=passed,
         gen_id_filter=5, # b quarks only
-        trg_id_filter=1, # Jets
-        trg_bits_filter=[26], # See above
+        hlt_id_filter=1, # Jets
+        hlt_bits_filter=[26], # See above
         n=2, # Just two jets
         dpt_min=None,dpt_max=None, # No requirements on delta pT
         verbosity=verbosity)
@@ -1925,13 +1930,13 @@ def HLT_matching_bbbb_phase2(events,gen,passed=None,verbosity=0):
     trg = HLT_objects(events)
 
     # DoubleTau trigger matching
-    matched_HLT = trigger_matching(
+    matched_HLT = hlt_matching(
         gen,
         trg,
         passed=passed,
         gen_id_filter=5, # Only b quarks
-        trg_id_filter=1, # Only jets
-        trg_bits_filter=[0,2,3], #@@ These seeem to be the most useful bits, bit=1 rarely set ...??
+        hlt_id_filter=1, # Only jets
+        hlt_bits_filter=[0,2,3], #@@ These seeem to be the most useful bits, bit=1 rarely set ...??
         n=4,
         dpt_min=None,dpt_max=None, # No requirements on delta pT
         verbosity=verbosity)
@@ -2038,12 +2043,28 @@ def SCT_plot_sig_eff_vs_jet_rank_bbbb_phase2(events,gen,pt_min,eta_max,passed=No
 #############################################################################################
 #
 def SCT_plot_eff_vs_jet_pt_bbbb_phase2(events,gen,pt_min,eta_max,passed=None,verbosity=0):
-    plot_eff_vs_jet_pt(events,"L1DisplacedJet",gen,pt_min,eta_max,passed=passed,verbosity=verbosity,year="Phase 2",com=14)
+    kwargs = {"year":"Phase 2", "com":14, "nbins":41, "start":0., "stop":205., "xlabel":"GEN b quark p$_{T}$ [GeV]"}
+    plot_perf_vs_pt(
+        "eff",events,"L1Jet",gen,
+        pt_min,eta_max,
+        passed=passed,
+        gen_id_filter=5,
+        n=4,dr_max=0.3,dpt_min=0.2,dpt_max=2.0,
+        verbosity=verbosity,
+        **kwargs)
 
 #############################################################################################
 #
 def SCT_plot_purity_vs_jet_pt_bbbb_phase2(events,gen,pt_min,eta_max,passed=None,verbosity=0):
-    plot_purity_vs_jet_pt(events,"L1DisplacedJet",gen,pt_min,eta_max,passed=passed,verbosity=verbosity,year="Phase 2",com=14)
+    kwargs = {"year":"Phase 2", "com":14, "nbins":41, "start":0., "stop":205., "xlabel":"L1 jet p$_{T}$ [GeV]"}
+    plot_perf_vs_pt(
+        "purity",events,"L1Jet",gen,
+        pt_min,eta_max,
+        passed=passed,
+        gen_id_filter=5,
+        n=4,dr_max=0.3,dpt_min=0.2,dpt_max=2.0,
+        verbosity=verbosity,
+        **kwargs)
 
 
 # ### EXECUTE
@@ -2282,13 +2303,13 @@ def HLT_matching_tautau_phase2(events,gen,passed=None,verbosity=0):
     trg = HLT_objects(events)
 
     # DoubleTau trigger matching
-    matched_HLT = trigger_matching(
+    matched_HLT = hlt_matching(
         gen,
         trg,
         passed=passed,
         gen_id_filter=15, # taus only
-        trg_id_filter=15, # taus only
-        trg_bits_filter=[0,1,2,3], # See above
+        hlt_id_filter=15, # taus only
+        hlt_bits_filter=[0,1,2,3], # See above
         n=2, # Both taus
         dpt_min=None,dpt_max=None,
         verbosity=verbosity)
@@ -2304,13 +2325,13 @@ def HLT_matching_bb_phase2(events,gen,passed=None,verbosity=0):
     trg = HLT_objects(events)
 
     # DoubleTau trigger matching
-    matched_HLT = trigger_matching(
+    matched_HLT = hlt_matching(
         gen,
         trg,
         passed=passed,
         gen_id_filter=5, # Only b quarks
-        trg_id_filter=1, # Only jets
-        trg_bits_filter=[0,2,3], #@@ These seeem to be the most useful bits, bit=1 rarely set ...??
+        hlt_id_filter=1, # Only jets
+        hlt_bits_filter=[0,2,3], #@@ These seeem to be the most useful bits, bit=1 rarely set ...??
         n=4,
         dpt_min=None,dpt_max=None, # No requirements on delta pT
         verbosity=verbosity)
@@ -2477,6 +2498,38 @@ def SCT_matching_bbtautau_phase2(events,gen,pt_min,eta_max,passed=None,verbosity
 
 
 
+# ### PLOT
+
+# In[ ]:
+
+
+#############################################################################################
+#
+def SCT_plot_eff_vs_jet_pt_bbtautau_phase2(events,gen,pt_min,eta_max,passed=None,verbosity=0):
+    kwargs = {"year":"Phase 2", "com":14, "nbins":41, "start":0., "stop":205., "xlabel":"GEN tau lepton p$_{T}$ [GeV]"}
+    plot_perf_vs_pt(
+        "eff",events,"L1GTnnTau",gen,
+        pt_min,eta_max,
+        passed=passed,
+        gen_id_filter=15,
+        n=2,dr_max=0.3,dpt_min=0.2,dpt_max=2.0,
+        verbosity=verbosity,
+        **kwargs)
+
+#############################################################################################
+#
+def SCT_plot_purity_vs_jet_pt_bbtautau_phase2(events,gen,pt_min,eta_max,passed=None,verbosity=0):
+    kwargs = {"year":"Phase 2", "com":14, "nbins":41, "start":0., "stop":205., "xlabel":"L1 tau p$_{T}$ [GeV]"}
+    plot_perf_vs_pt(
+        "purity",events,"L1GTnnTau",gen,
+        pt_min,eta_max,
+        passed=passed,
+        gen_id_filter=15,
+        n=2,dr_max=0.3,dpt_min=0.2,dpt_max=2.0,
+        verbosity=verbosity,
+        **kwargs)
+
+
 # ### EXECUTE
 
 # In[ ]:
@@ -2513,6 +2566,11 @@ def selections_bbtautau_phase2(**kwargs):
     matched_HLT = HLT_matching_bbtautau_phase2(events,gen,passed=passed_HLT,option=option,verbosity=verbosity) if use_matched else ak.full_like(passed_HLT,True,dtype=bool)
     matched_OFF = OFF_matching_bbtautau_phase2(events,gen,pt_min=off_pt_min,eta_max=off_eta_max,btag_min=off_btag_min,passed=matched_HLT,verbosity=verbosity)
     matched_SCT = SCT_matching_bbtautau_phase2(events,gen,pt_min=sct_pt_min,eta_max=sct_eta_max,passed=passed_GEN,verbosity=verbosity)
+
+    # Plotting (only plot once)
+    if use_matched == False and option == "tautau":
+        SCT_plot_eff_vs_jet_pt_bbtautau_phase2(events,gen,pt_min=sct_pt_min,eta_max=sct_eta_max,passed=passed_GEN,verbosity=verbosity)
+        SCT_plot_purity_vs_jet_pt_bbtautau_phase2(events,gen,pt_min=sct_pt_min,eta_max=sct_eta_max,passed=passed_GEN,verbosity=verbosity)
 
     print_summary(
         events,
