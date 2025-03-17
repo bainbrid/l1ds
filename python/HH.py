@@ -757,7 +757,7 @@ def plot_sig_eff_vs_jet_rank(
     assert ak.all(obj.pt == ak.sort(obj.pt, ascending=False, axis=-1)), "ak.array not sorted by pT!"
 
     counts = []
-    njets_max = ak.max( ak.num(obj,axis=-1) ) 
+    njets_max = ak.max( ak.num(obj,axis=-1) )
     for N in range(njets_max+1):
         first_njets = obj[:,:N] # Consider only the first 'N' jets
         mask = (ak.count_nonzero(first_njets.match,axis=-1) >=4) # Count at least 4 matches found in first N jets 
@@ -870,13 +870,9 @@ def plot_perf_vs_pt(
         ax=ax2,
         )
 
-    if perf == "eff":
-        ax1.set_xlabel(xlabel)
-        ax1.set_ylabel(ylabel)
-    elif perf == "purity":
-        ax1.set_xlabel("L1 jet p$_{T}$ [GeV]")
-        ax1.set_ylabel("Purity")
     width = (stop - start) / nbins
+    ax1.set_xlabel(xlabel)
+    ax1.set_ylabel(ylabel)
     ax2.set_ylabel(f"Entries / {width:.0f} GeV")
     ax1.set_xlim(start,stop)
     ax2.set_xlim(start,stop)
@@ -994,6 +990,7 @@ def load_data_bbbb(nevents=None,skip=0,verbosity=0):
         "nTrigObj", "TrigObj_pt", "TrigObj_eta", "TrigObj_phi", "TrigObj_id", "TrigObj_filterBits", # Trigger objects
         "Jet_pt", "Jet_eta", "Jet_phi", "Jet_btagPNetB", # Offline jets
         "nL1Jet", "L1Jet_pt", "L1Jet_eta", "L1Jet_phi", # L1 jets 
+        "nL1Tau", "L1Tau_pt", "L1Tau_eta", "L1Tau_phi", # L1 taus
     ]
 
     # Load data into awkward arrays
@@ -1243,6 +1240,32 @@ def SCT_plot_purity_vs_jet_pt_bbbb(events,gen,pt_min,eta_max,passed=None,verbosi
         verbosity=verbosity,
         **kwargs)
 
+#############################################################################################
+#
+def SCT_plot_eff_vs_tau_pt_bbbb(events,gen,pt_min,eta_max,passed=None,verbosity=0):
+    kwargs = {"year":2023, "com":13.6, "nbins":41, "start":0., "stop":205., "xlabel":"GEN b quark p$_{T}$ [GeV]"}
+    plot_perf_vs_pt(
+        "eff",events,"L1Tau",gen,
+        pt_min,eta_max,
+        passed=passed,
+        gen_id_filter=5,
+        n=4,dr_max=0.3,dpt_min=0.2,dpt_max=2.0,
+        verbosity=verbosity,
+        **kwargs)
+
+#############################################################################################
+#
+def SCT_plot_purity_vs_tau_pt_bbbb(events,gen,pt_min,eta_max,passed=None,verbosity=0):
+    kwargs = {"year":2023, "com":13.6, "nbins":41, "start":0., "stop":205., "xlabel":"L1 tau p$_{T}$ [GeV]"}
+    plot_perf_vs_pt(
+        "purity",events,"L1Tau",gen,
+        pt_min,eta_max,
+        passed=passed,
+        gen_id_filter=5,
+        n=4,dr_max=0.3,dpt_min=0.2,dpt_max=2.0,
+        verbosity=verbosity,
+        **kwargs)
+
 
 # ### EXECUTE
 
@@ -1286,6 +1309,8 @@ def selections_bbbb(**kwargs):
         SCT_plot_sig_eff_vs_jet_rank_bbbb(events,gen,pt_min=sct_pt_min,eta_max=sct_eta_max,passed=passed_GEN,verbosity=verbosity)
         SCT_plot_eff_vs_jet_pt_bbbb(events,gen,pt_min=sct_pt_min,eta_max=sct_eta_max,passed=passed_GEN,verbosity=verbosity)
         SCT_plot_purity_vs_jet_pt_bbbb(events,gen,pt_min=sct_pt_min,eta_max=sct_eta_max,passed=passed_GEN,verbosity=verbosity)
+        SCT_plot_eff_vs_tau_pt_bbbb(events,gen,pt_min=sct_pt_min,eta_max=sct_eta_max,passed=passed_GEN,verbosity=verbosity)
+        SCT_plot_purity_vs_tau_pt_bbbb(events,gen,pt_min=sct_pt_min,eta_max=sct_eta_max,passed=passed_GEN,verbosity=verbosity)
 
     print_summary(
         events,
@@ -1743,6 +1768,38 @@ def SCT_matching_bbtautau(events,gen,pt_min,eta_max,passed=None,verbosity=0):
     return matched_SCT_tautau & matched_SCT_bb
 
 
+# ### PLOT
+
+# In[ ]:
+
+
+#############################################################################################
+#
+def SCT_plot_eff_vs_tau_pt_bbtautau(events,gen,pt_min,eta_max,passed=None,verbosity=0):
+    kwargs = {"year":2023, "com":13.6, "nbins":41, "start":0., "stop":205., "xlabel":"GEN tau lepton p$_{T}$ [GeV]"}
+    plot_perf_vs_pt(
+        "eff",events,"L1Tau",gen,
+        pt_min,eta_max,
+        passed=passed,
+        gen_id_filter=15,
+        n=2,dr_max=0.3,dpt_min=0.2,dpt_max=2.0,
+        verbosity=verbosity,
+        **kwargs)
+
+#############################################################################################
+#
+def SCT_plot_purity_vs_tau_pt_bbtautau(events,gen,pt_min,eta_max,passed=None,verbosity=0):
+    kwargs = {"year":2023, "com":13.6, "nbins":41, "start":0., "stop":205., "xlabel":"L1 tau p$_{T}$ [GeV]"}
+    plot_perf_vs_pt(
+        "purity",events,"L1Tau",gen,
+        pt_min,eta_max,
+        passed=passed,
+        gen_id_filter=15,
+        n=2,dr_max=0.3,dpt_min=0.2,dpt_max=2.0,
+        verbosity=verbosity,
+        **kwargs)
+
+
 # ### EXECUTE
 
 # In[ ]:
@@ -1779,6 +1836,11 @@ def selections_bbtautau(**kwargs):
     matched_HLT = HLT_matching_bbtautau(events,gen,passed=passed_HLT,option=option,verbosity=verbosity) if use_matched else ak.full_like(passed_HLT,True,dtype=bool)
     matched_OFF = OFF_matching_bbtautau(events,gen,pt_min=off_pt_min,eta_max=off_eta_max,btag_min=off_btag_min,passed=matched_HLT,verbosity=verbosity)
     matched_SCT = SCT_matching_bbtautau(events,gen,pt_min=sct_pt_min,eta_max=sct_eta_max,passed=passed_GEN,verbosity=verbosity)
+
+    # Plotting (only plot once)
+    if use_matched == False and option == "tautau":
+        SCT_plot_eff_vs_tau_pt_bbtautau(events,gen,pt_min=sct_pt_min,eta_max=sct_eta_max,passed=passed_GEN,verbosity=verbosity)
+        SCT_plot_purity_vs_tau_pt_bbtautau(events,gen,pt_min=sct_pt_min,eta_max=sct_eta_max,passed=passed_GEN,verbosity=verbosity)
 
     print_summary(
         events,
@@ -2505,7 +2567,7 @@ def SCT_matching_bbtautau_phase2(events,gen,pt_min,eta_max,passed=None,verbosity
 
 #############################################################################################
 #
-def SCT_plot_eff_vs_jet_pt_bbtautau_phase2(events,gen,pt_min,eta_max,passed=None,verbosity=0):
+def SCT_plot_eff_vs_tau_pt_bbtautau_phase2(events,gen,pt_min,eta_max,passed=None,verbosity=0):
     kwargs = {"year":"Phase 2", "com":14, "nbins":41, "start":0., "stop":205., "xlabel":"GEN tau lepton p$_{T}$ [GeV]"}
     plot_perf_vs_pt(
         "eff",events,"L1GTnnTau",gen,
@@ -2518,7 +2580,7 @@ def SCT_plot_eff_vs_jet_pt_bbtautau_phase2(events,gen,pt_min,eta_max,passed=None
 
 #############################################################################################
 #
-def SCT_plot_purity_vs_jet_pt_bbtautau_phase2(events,gen,pt_min,eta_max,passed=None,verbosity=0):
+def SCT_plot_purity_vs_tau_pt_bbtautau_phase2(events,gen,pt_min,eta_max,passed=None,verbosity=0):
     kwargs = {"year":"Phase 2", "com":14, "nbins":41, "start":0., "stop":205., "xlabel":"L1 tau p$_{T}$ [GeV]"}
     plot_perf_vs_pt(
         "purity",events,"L1GTnnTau",gen,
@@ -2569,8 +2631,8 @@ def selections_bbtautau_phase2(**kwargs):
 
     # Plotting (only plot once)
     if use_matched == False and option == "tautau":
-        SCT_plot_eff_vs_jet_pt_bbtautau_phase2(events,gen,pt_min=sct_pt_min,eta_max=sct_eta_max,passed=passed_GEN,verbosity=verbosity)
-        SCT_plot_purity_vs_jet_pt_bbtautau_phase2(events,gen,pt_min=sct_pt_min,eta_max=sct_eta_max,passed=passed_GEN,verbosity=verbosity)
+        SCT_plot_eff_vs_tau_pt_bbtautau_phase2(events,gen,pt_min=sct_pt_min,eta_max=sct_eta_max,passed=passed_GEN,verbosity=verbosity)
+        SCT_plot_purity_vs_tau_pt_bbtautau_phase2(events,gen,pt_min=sct_pt_min,eta_max=sct_eta_max,passed=passed_GEN,verbosity=verbosity)
 
     print_summary(
         events,
